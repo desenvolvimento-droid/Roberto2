@@ -1,7 +1,5 @@
 ﻿using BuildingBlocks.Core.Event;
 using BuildingBlocks.Core.Model;
-using Domain.Entities.Conta;
-using Domain.Events;
 using Domain.Exceptions;
 
 namespace Domain.Entities.Clientes;
@@ -20,26 +18,27 @@ public record Cliente : AggregateRoot
             nome
         );
 
-        cliente.AddDomainEvent(clienteCriadoEvent);
+        cliente.RecordEvent(clienteCriadoEvent);
 
         return cliente;
     }
 
     public void ComNome(string nome)
     {
-        var clienteCriadoEvent = new NomeClienteAtualizadoEvent
-        (
-            Guid.NewGuid(),
-            nome
-        );
-
         if (Nome == nome)
             return;
 
-        AddDomainEvent(clienteCriadoEvent);
+        var nomeAtualizadoEvent = new NomeClienteAtualizadoEvent
+        (
+            Id == Guid.Empty ? Guid.NewGuid() : Id,
+            nome
+        );
+
+        // Aplica e registra o evento usando a API do AggregateRoot
+        RecordEvent(nomeAtualizadoEvent);
     }
 
-    protected override void Validar()
+    protected override void ValidateInvariants()
     {
         if (string.IsNullOrEmpty(Nome))
             throw new DomainException("Nome não pode ser nulo");
@@ -47,8 +46,8 @@ public record Cliente : AggregateRoot
 
     protected override void When(IDomainEvent @event)
     {
-        switch (@event) {
-
+        switch (@event)
+        {
             case ClienteCriadoEvent e:
                 Id = e.Id;
                 Nome = e.Nome;
