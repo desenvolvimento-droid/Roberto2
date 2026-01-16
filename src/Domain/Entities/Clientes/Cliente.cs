@@ -31,7 +31,7 @@ public sealed class Cliente : AggregateRoot
         if (Status == ClienteStatus.Active)
             throw new InvalidOperationException("Cliente já está ativo.");
 
-        RecordEvent(new ClienteActivated(Id));
+        RecordEvent(new ClienteEvents(Id));
     }
 
     public void Deactivate()
@@ -53,7 +53,7 @@ public sealed class Cliente : AggregateRoot
                 CriadoEm = e.OcorreuEm;
                 break;
 
-            case ClienteActivated:
+            case ClienteEvents:
                 Status = ClienteStatus.Active;
                 break;
 
