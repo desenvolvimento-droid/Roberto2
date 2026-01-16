@@ -1,8 +1,10 @@
-﻿using FluentResults;
-using MediatR;
+﻿using MediatR;
 
 namespace Application.UseCases.Clientes.Criar;
 
-public record CriarClienteCommand(string Nome) : IRequest<Result<CriarClienteResult>>;
+/// <summary>
+/// Comando imutável contendo apenas os dados necessários para criar um cliente.
+/// </summary>
+public sealed record CriarClienteCommand(string Nome) : IRequest<FluentResults.Result<CriarClienteResult>>;
 
-public record CriarClienteResult(Guid Id, DateTime CriadoEm);
+public sealed record CriarClienteResult(Guid Id, DateTime CriadoEm);

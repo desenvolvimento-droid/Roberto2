@@ -1,5 +1,4 @@
 using BuildingBlocks.Core.Event;
-using BuildingBlocks.Core.Event;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,38 +7,52 @@ namespace BuildingBlocks.Core.Model;
 
 /// <summary>
 /// Base para Aggregate Roots compatível com Event Sourcing.
-/// Fornece: aplicação de eventos (replay vs novos), tracking de eventos não confirmados,
-/// controle de versão, hooks de snapshot e validação de invariantes.
+/// Responsável por:
+/// - Aplicação de eventos (novos vs histórico)
+/// - Controle de versão (optimistic concurrency)
+/// - Tracking de eventos não confirmados
+/// - Suporte a snapshot
+/// - Validação de invariantes
+///
+/// Observação:
+/// - A ordenação e versionamento oficial dos eventos
+///   deve ser garantida pelo Event Store.
 /// </summary>
-public abstract record AggregateRoot : IAggregate
+public abstract class AggregateRoot : IAggregate
 {
-    // Identificador do agregado
-    public Guid Id { get; set; }
+    // Identidade do agregado (definida apenas por eventos)
+    public Guid Id { get; protected set; }
 
-    // Versão atual do agregado (número de eventos aplicados / confirmados)
+    // Versão atual do agregado (quantidade de eventos confirmados)
     public long Versao { get; protected set; } = 0;
 
-    // Versão observada quando o agregado foi carregado (útil como expectedVersion)
+    // Versão observada no carregamento (expectedVersion)
     public long OriginalVersao { get; private set; } = 0;
 
-    // Auditoria
-    public DateTime CriadoEm { get; set; } = DateTime.UtcNow;
-    public DateTime AtualizadoEm { get; set; } = DateTime.UtcNow;
+    // Auditoria técnica
+    public DateTime CriadoEm { get; protected set; } = DateTime.UtcNow;
+    public DateTime AtualizadoEm { get; protected set; } = DateTime.UtcNow;
 
-    // Eventos não confirmados
+    // Eventos ainda não persistidos
     private readonly List<IDomainEvent> _uncommittedEvents = new();
-    public IReadOnlyCollection<IDomainEvent> GetUncommittedEvents() => _uncommittedEvents.AsReadOnly();
+    public IReadOnlyCollection<IDomainEvent> GetUncommittedEvents()
+        => _uncommittedEvents.AsReadOnly();
 
-    // Helper para idempotência durante replay
+    // Proteção adicional contra reaplicação acidental
     private readonly HashSet<Guid> _appliedEventIds = new();
 
     /// <summary>
-    /// Registra e aplica um novo evento no agregado (gera um UncommittedEvent).
+    /// Registra e aplica um novo evento de domínio.
+    /// Gera um evento não confirmado (uncommitted).
     /// </summary>
     protected void RecordEvent(IDomainEvent domainEvent)
     {
-        if (domainEvent == null) throw new ArgumentNullException(nameof(domainEvent));
-        if (_uncommittedEvents.Any(e => e.EventId == domainEvent.EventId)) return;
+        if (domainEvent is null)
+            throw new ArgumentNullException(nameof(domainEvent));
+
+        // Proteção contra duplicidade acidental
+        if (_appliedEventIds.Contains(domainEvent.EventId))
+            return;
 
         When(domainEvent);
         ValidateInvariants();
@@ -51,30 +64,34 @@ public abstract record AggregateRoot : IAggregate
     }
 
     /// <summary>
-    /// Aplica um evento vindo do histórico sem marcá-lo como uncommitted.
-    /// Idempotente: ignora EventId já aplicado.
+    /// Aplica um evento vindo do histórico.
+    /// Não gera evento não confirmado.
     /// </summary>
     public void ApplyEventFromHistory(IDomainEvent domainEvent)
     {
-        if (domainEvent == null) throw new ArgumentNullException(nameof(domainEvent));
-        if (_appliedEventIds.Contains(domainEvent.EventId)) return;
+        if (domainEvent is null)
+            throw new ArgumentNullException(nameof(domainEvent));
+
+        if (_appliedEventIds.Contains(domainEvent.EventId))
+            return;
 
         When(domainEvent);
-        _appliedEventIds.Add(domainEvent.EventId);
 
+        _appliedEventIds.Add(domainEvent.EventId);
         Versao++;
         AtualizadoEm = DateTime.UtcNow;
     }
 
     /// <summary>
-    /// Reidrata o agregado a partir do histórico (lista ordenada).
+    /// Reidrata o agregado a partir de um histórico ordenado de eventos.
     /// </summary>
     public void LoadFromHistory(IEnumerable<IDomainEvent> history)
     {
-        if (history == null) throw new ArgumentNullException(nameof(history));
+        if (history is null)
+            throw new ArgumentNullException(nameof(history));
 
-        foreach (var e in history)
-            ApplyEventFromHistory(e);
+        foreach (var @event in history)
+            ApplyEventFromHistory(@event);
 
         OriginalVersao = Versao;
         _uncommittedEvents.Clear();
@@ -82,24 +99,23 @@ public abstract record AggregateRoot : IAggregate
     }
 
     /// <summary>
-    /// Hook opcional: criar snapshot (implementação concreta retorna DTO de snapshot).
+    /// Hook opcional para criação de snapshot.
     /// </summary>
     public virtual object? CreateSnapshot() => null;
 
     /// <summary>
-    /// Hook opcional: restaurar estado a partir de snapshot. Implementação concreta deve aplicar estado.
+    /// Hook opcional para restaurar estado a partir de snapshot.
     /// </summary>
-    public virtual void RestoreFromSnapshot(object snapshot, long snapshotVersion) { }
+    protected virtual void RestoreFromSnapshot(object snapshot) { }
 
     /// <summary>
-    /// Restaura snapshot e garante atualização de versão do agregado internamente.
-    /// Use este método a partir do repositório ao desserializar snapshot.
+    /// Restaura estado a partir de snapshot e ajusta versão internamente.
+    /// Deve ser chamado pelo repositório.
     /// </summary>
-    public virtual void RestoreFromSnapshotState(object snapshot, long snapshotVersion)
+    public void RestoreFromSnapshotState(object snapshot, long snapshotVersion)
     {
-        RestoreFromSnapshot(snapshot, snapshotVersion);
+        RestoreFromSnapshot(snapshot);
 
-        // Ajusta versão observada após restaurar estado
         Versao = snapshotVersion;
         OriginalVersao = snapshotVersion;
 
@@ -110,11 +126,13 @@ public abstract record AggregateRoot : IAggregate
     }
 
     /// <summary>
-    /// Marca eventos não confirmados como confirmados (committed) e atualiza versão.
+    /// Marca eventos não confirmados como persistidos
+    /// e atualiza a versão do agregado.
     /// </summary>
     public IDomainEvent[] MarkEventsAsCommitted()
     {
-        if (_uncommittedEvents.Count == 0) return Array.Empty<IDomainEvent>();
+        if (_uncommittedEvents.Count == 0)
+            return Array.Empty<IDomainEvent>();
 
         var committed = _uncommittedEvents.ToArray();
         _uncommittedEvents.Clear();
@@ -126,14 +144,13 @@ public abstract record AggregateRoot : IAggregate
     }
 
     /// <summary>
-    /// Deve ser implementado para aplicar efeitos de estado de cada evento.
-    /// Não deve gerar novos eventos (use RecordEvent para isso).
+    /// Aplica o efeito de um evento no estado do agregado.
+    /// Não deve gerar novos eventos.
     /// </summary>
     protected abstract void When(IDomainEvent @event);
 
     /// <summary>
-    /// Deve validar invariantes de domínio após alterações de estado.
-    /// Lançar exceção caso invariantes violadas.
+    /// Valida invariantes de domínio após mudanças de estado.
     /// </summary>
     protected abstract void ValidateInvariants();
 }

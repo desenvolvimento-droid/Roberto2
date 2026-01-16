@@ -1,4 +1,8 @@
-﻿using Domain.BuildingBlocks.Dispacher;
+﻿using System.Diagnostics;
+using System.Diagnostics.Metrics;
+using FluentValidation;
+using Microsoft.Extensions.Logging;
+using Domain.BuildingBlocks.Dispacher;
 using Domain.Entities.Clientes;
 using Domain.Interfaces;
 using FluentResults;
@@ -6,23 +10,43 @@ using MediatR;
 
 namespace Application.UseCases.Clientes.Criar;
 
-public sealed class CriarClienteHandler(
-    IEventStoreRepository<Cliente> eventStorage,
-    IEventDispatcherRepository eventDispatcher)
-    : IRequestHandler<CriarClienteCommand, Result<CriarClienteResult>>
+public sealed class CriarClienteHandler : IRequestHandler<CriarClienteCommand, Result<CriarClienteResult>>
 {
-    public async Task<Result<CriarClienteResult>> Handle(CriarClienteCommand cmd, CancellationToken cancellationToken)
+    private readonly IEventStoreRepository<Cliente> _eventStore;
+    private readonly IEventDispatcherRepository _eventDispatcher;
+    private readonly IValidator<CriarClienteCommand> _validator;
+    private readonly ILogger<CriarClienteHandler> _logger;
+
+ 
+    public CriarClienteHandler(
+        IEventStoreRepository<Cliente> eventStore,
+        IEventDispatcherRepository eventDispatcher,
+        IValidator<CriarClienteCommand> validator,
+        ILogger<CriarClienteHandler> logger)
     {
-        var cliente = Cliente.Create(cmd.Nome);
+        _eventStore = eventStore ?? throw new ArgumentNullException(nameof(eventStore));
+        _eventDispatcher = eventDispatcher ?? throw new ArgumentNullException(nameof(eventDispatcher));
+        _validator = validator ?? throw new ArgumentNullException(nameof(validator));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+    }
 
-        await eventStorage.AppendAsync(cliente);
+    public async Task<Result<CriarClienteResult>> Handle(CriarClienteCommand request, CancellationToken cancellationToken)
+    {
+        var validation = await _validator.ValidateAsync(request, cancellationToken).ConfigureAwait(false);
+        if (!validation.IsValid)
+        {
+            _logger.LogWarning("Validação falhou: {Errors}", validation.Errors);
+            return Result.Fail("Falha de validação");
+        }
 
-        var result = new CriarClienteResult(
-            cliente.Id,
-            cliente.CriadoEm);
+        var cliente = Cliente.Create(request.Nome);
 
-        await eventDispatcher.DispatchAsync(cliente, cancellationToken);
+        await _eventStore.AppendAsync(cliente, cancellationToken).ConfigureAwait(false);
 
-        return result;
+        await _eventDispatcher.DispatchAsync(cliente, cancellationToken).ConfigureAwait(false);
+
+        _logger.LogInformation("Cliente criado: {ClienteId}", cliente.Id);
+
+        return Result.Ok(new CriarClienteResult(cliente.Id, cliente.CriadoEm));
     }
 }

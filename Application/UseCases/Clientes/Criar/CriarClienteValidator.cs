@@ -2,10 +2,14 @@
 
 namespace Application.UseCases.Clientes.Criar;
 
-public class CriarClienteValidator : AbstractValidator<CriarClienteCommand>
+public sealed class CriarClienteValidator : AbstractValidator<CriarClienteCommand>
 {
     public CriarClienteValidator()
     {
-        //TODO Adicionar validações fluent validation
+        RuleFor(x => x.Nome)
+            .NotEmpty().WithMessage("Nome é obrigatório.")
+            .MinimumLength(2).WithMessage("Nome deve ter ao menos 2 caracteres.")
+            .MaximumLength(200).WithMessage("Nome deve ter no máximo 200 caracteres.");
     }
 }
+

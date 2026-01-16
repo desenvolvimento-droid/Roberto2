@@ -1,63 +1,80 @@
-﻿using BuildingBlocks.Core.Event;
+﻿using System;
 using BuildingBlocks.Core.Model;
-using Domain.Exceptions;
+using BuildingBlocks.Core.Event;
 
 namespace Domain.Entities.Clientes;
 
-public record Cliente : AggregateRoot
+public sealed class Cliente : AggregateRoot
 {
-    public string Nome { get; private set; }
+    public string Nome { get; private set; } = string.Empty;
 
+    public ClienteStatus Status { get; private set; } = ClienteStatus.Inactive;
+
+    protected Cliente() { }
+
+    // Factory
     public static Cliente Create(string nome)
     {
+        if (string.IsNullOrWhiteSpace(nome))
+            throw new ArgumentException("Nome é obrigatório.", nameof(nome));
+
         var cliente = new Cliente();
+        var clienteId = Guid.NewGuid();
 
-        var clienteCriadoEvent = new ClienteCriadoEvent
-        (
-            Guid.NewGuid(),
-            nome
-        );
-
-        cliente.RecordEvent(clienteCriadoEvent);
+        cliente.RecordEvent(new ClienteCreated(clienteId, nome));
 
         return cliente;
     }
 
-    public void ComNome(string nome)
+    public void Activate()
     {
-        if (Nome == nome)
-            return;
+        if (Status == ClienteStatus.Active)
+            throw new InvalidOperationException("Cliente já está ativo.");
 
-        var nomeAtualizadoEvent = new NomeClienteAtualizadoEvent
-        (
-            Id == Guid.Empty ? Guid.NewGuid() : Id,
-            nome
-        );
-
-        // Aplica e registra o evento usando a API do AggregateRoot
-        RecordEvent(nomeAtualizadoEvent);
+        RecordEvent(new ClienteActivated(Id));
     }
 
-    protected override void ValidateInvariants()
+    public void Deactivate()
     {
-        if (string.IsNullOrEmpty(Nome))
-            throw new DomainException("Nome não pode ser nulo");
+        if (Status == ClienteStatus.Inactive)
+            throw new InvalidOperationException("Cliente já está inativo.");
+
+        RecordEvent(new ClienteDeactivated(Id));
     }
 
     protected override void When(IDomainEvent @event)
     {
         switch (@event)
         {
-            case ClienteCriadoEvent e:
-                Id = e.Id;
+            case ClienteCreated e:
+                Id = e.ClienteId;
                 Nome = e.Nome;
+                Status = ClienteStatus.Inactive;
+                CriadoEm = e.OcorreuEm;
                 break;
-            case NomeClienteAtualizadoEvent e:
-                Id = e.Id;
-                Nome = e.Nome;
+
+            case ClienteActivated:
+                Status = ClienteStatus.Active;
                 break;
-            default:
-                throw new DomainException("Evento não criado");
+
+            case ClienteDeactivated:
+                Status = ClienteStatus.Inactive;
+                break;
         }
     }
+
+    protected override void ValidateInvariants()
+    {
+        if (Id == Guid.Empty)
+            throw new InvalidOperationException("ClienteId inválido.");
+
+        if (string.IsNullOrWhiteSpace(Nome))
+            throw new InvalidOperationException("Nome do cliente é obrigatório.");
+    }
+}
+
+public enum ClienteStatus
+{
+    Inactive = 0,
+    Active = 1
 }
