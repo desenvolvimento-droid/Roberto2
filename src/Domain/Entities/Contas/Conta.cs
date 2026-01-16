@@ -59,8 +59,6 @@ public sealed class Conta : AggregateRoot
         if (SaldoDisponivel + LimiteCredito < valor)
             throw new InvalidOperationException("Limite insuficiente.");
 
-        SaldoReservado += valor;
-        SaldoDisponivel -= valor;
         RecordEvent(new ReservationCompleted(Id, valor));
     }
 
@@ -86,7 +84,11 @@ public sealed class Conta : AggregateRoot
                 CriadoEm = e.OcorreuEm;
                 break;
 
-            case 
+            case ReservationCompleted e:
+                SaldoReservado += e.Valor;
+                SaldoDisponivel -= e.Valor;
+                break;
+
             case LimiteCreditoDefinido e:
                 LimiteCredito = e.LimiteCredito;
                 break;

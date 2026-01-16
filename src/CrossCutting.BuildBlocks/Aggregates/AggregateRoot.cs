@@ -1,7 +1,5 @@
 using BuildingBlocks.Core.Event;
-using System;
-using System.Collections.Generic;
-using System.Linq;
+using Domain.Exceptions;
 
 namespace BuildingBlocks.Core.Model;
 
@@ -93,7 +91,6 @@ public abstract class AggregateRoot : IAggregate
         foreach (var @event in history)
             ApplyEventFromHistory(@event);
 
-        OriginalVersao = Versao;
         _uncommittedEvents.Clear();
         AtualizadoEm = DateTime.UtcNow;
     }
@@ -127,12 +124,15 @@ public abstract class AggregateRoot : IAggregate
 
     /// <summary>
     /// Marca eventos não confirmados como persistidos
-    /// e atualiza a versão do agregado.
+    /// validando a versão esperada (expectedVersion) antes de atualizar a versão do agregado.
     /// </summary>
-    public IDomainEvent[] MarkEventsAsCommitted()
+    public IDomainEvent[] MarkEventsAsCommitted(long expectedVersion)
     {
         if (_uncommittedEvents.Count == 0)
             return Array.Empty<IDomainEvent>();
+
+        if (OriginalVersao != expectedVersion)
+            throw new ConcurrencyException($"Concurrency conflict on aggregate {Id}. Expected {expectedVersion} but OriginalVersao is {OriginalVersao}.");
 
         var committed = _uncommittedEvents.ToArray();
         _uncommittedEvents.Clear();
@@ -142,6 +142,12 @@ public abstract class AggregateRoot : IAggregate
 
         return committed;
     }
+
+    /// <summary>
+    /// Compatibilidade: versão sem parâmetro delega para a sobrecarga validando contra a OriginalVersao.
+    /// </summary>
+    public IDomainEvent[] MarkEventsAsCommitted()
+        => MarkEventsAsCommitted(OriginalVersao);
 
     /// <summary>
     /// Aplica o efeito de um evento no estado do agregado.

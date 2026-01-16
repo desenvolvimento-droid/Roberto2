@@ -1,6 +1,5 @@
-﻿using System;
+﻿using BuildingBlocks.Core.Event;
 using BuildingBlocks.Core.Model;
-using BuildingBlocks.Core.Event;
 
 namespace Domain.Entities.Clientes;
 
