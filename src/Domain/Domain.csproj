@@ -10,4 +10,8 @@
     <ProjectReference Include="..\CrossCutting.BuildBlocks\CrossCutting.BuildBlocks.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Entities\AuditoriaOperacoes\" />
+  </ItemGroup>
+
 </Project>

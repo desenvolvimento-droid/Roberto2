@@ -1,6 +1,7 @@
 using System;
 using BuildingBlocks.Core.Model;
 using BuildingBlocks.Core.Event;
+using Domain.Entities.Clientes;
 
 namespace Domain.Entities.Contas;
 
@@ -53,6 +54,16 @@ public sealed class Conta : AggregateRoot
         RecordEvent(new ContaActivated(ContaId));
     }
 
+    public void Reservar(decimal valor)
+    {
+        if (SaldoDisponivel + LimiteCredito < valor)
+            throw new InvalidOperationException("Limite insuficiente.");
+
+        SaldoReservado += valor;
+        SaldoDisponivel -= valor;
+        RecordEvent(new ReservationCompleted(Id, valor));
+    }
+
     public void Block()
     {
         if (Status == ContaStatus.Blocked)
@@ -75,6 +86,7 @@ public sealed class Conta : AggregateRoot
                 CriadoEm = e.OcorreuEm;
                 break;
 
+            case 
             case LimiteCreditoDefinido e:
                 LimiteCredito = e.LimiteCredito;
                 break;
