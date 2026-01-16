@@ -1,0 +1,30 @@
+<Solution>
+  <Folder Name="/Aspire/">
+    <Project Path="src/AppHost/AppHost.csproj" />
+  </Folder>
+  <Folder Name="/Itens de Solução/">
+    <File Path="Directory.Packages.props" />
+  </Folder>
+  <Folder Name="/src/" />
+  <Folder Name="/src/Adapters/" />
+  <Folder Name="/src/Adapters/Drivens/">
+    <Project Path="Infra.ReadModel.Mongo/Infra.ReadModel.Mongo.csproj" Id="09f19eb3-b197-4462-8db7-0337837bd225" />
+    <Project Path="Infra.Repository.OutBox/Infra.Batch.Mongo.csproj" Id="954d4d80-d285-47db-a5d1-88f5616ba87e" />
+    <Project Path="Infra.Service.Rebbitmq/Infra.Publisher.MassTransit.csproj" Id="67a52cb5-06f4-4905-a3df-b84b00abc6df" />
+    <Project Path="Infra.Services.Batchs/Infra.Service.Dispacher.csproj" Id="f81c317a-d36b-47d8-8f02-bb7f2a394f19" />
+    <Project Path="Infra/Infra.EventStore.Mongo.csproj" />
+  </Folder>
+  <Folder Name="/src/Adapters/Drivers/">
+    <Project Path="Consumers/Consumers.csproj" />
+    <Project Path="src/Api/Api.csproj" />
+    <Project Path="Worker/Worker.csproj" />
+  </Folder>
+  <Folder Name="/src/Core/">
+    <Project Path="Application/Application.csproj" />
+    <Project Path="src/Domain/Domain.csproj" />
+  </Folder>
+  <Folder Name="/src/CrossCutting/">
+    <Project Path="src/CrossCutting.BuildBlocks/CrossCutting.BuildBlocks.csproj" />
+    <Project Path="src/CrossCutting.Common/Common.csproj" />
+  </Folder>
+</Solution>
