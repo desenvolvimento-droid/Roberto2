@@ -103,13 +103,13 @@ public sealed class MongoEventStoreRepository<TAggregate> : IEventStoreRepositor
         {
             try
             {
-                var clr = Type.GetType(snapDoc.SnapshotType);
-                if (clr != null)
-                {
-                    var snapshotObj = BsonSerializer.Deserialize(snapDoc.Data, clr);
-                    // Hook público para a implementação concreta restaurar estado do snapshot.
-                    aggregate.RestoreFromSnapshotState(snapshotObj, snapDoc.Version);
-                }
+                    var clr = Type.GetType(snapDoc.SnapshotType);
+                    if (clr != null)
+                    {
+                        var snapshotObj = BsonSerializer.Deserialize(snapDoc.Data, clr);
+                        // Hook público para a implementação concreta restaurar estado do snapshot.
+                        aggregate.RestoreFromSnapshot(snapshotObj, snapDoc.Version);
+                    }
                 else
                 {
                     _logger.LogDebug("Tipo de snapshot não encontrado ({SnapshotType}) para aggregate {AggregateId}", snapDoc.SnapshotType, aggregateId);
@@ -210,7 +210,9 @@ public sealed class MongoEventStoreRepository<TAggregate> : IEventStoreRepositor
                 AggregateType = typeof(TAggregate).AssemblyQualifiedName!,
                 EventType = evType.AssemblyQualifiedName!,
                 OccurredOn = e.OcorreuEm,
-                Version = expectedVersion + i + 1,
+                // Prefer version assigned on the event instance; fallback to
+                // expectedVersion + index when absent.
+                Version = e.Versao != 0 ? e.Versao : expectedVersion + i + 1,
                 Data = e.ToBsonDocument()
             };
         }).ToList();
@@ -357,6 +359,8 @@ public sealed class MongoEventStoreRepository<TAggregate> : IEventStoreRepositor
     {
         var eventType = Type.GetType(doc.EventType, throwOnError: true)!;
         var domainEvent = (IDomainEvent)BsonSerializer.Deserialize(doc.Data, eventType)!;
+        // Ensure event instance reflects stored version
+        domainEvent.Versao = doc.Version;
         return domainEvent;
     }
 

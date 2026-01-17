@@ -20,7 +20,12 @@ public sealed class Cliente : AggregateRoot
         var cliente = new Cliente();
         var clienteId = Guid.NewGuid();
 
-        cliente.RecordEvent(new ClienteCreated(clienteId, nome));
+        var ev = new ClienteCreated(clienteId, nome);
+        // Basic metadata for events created inside domain (no request context available here)
+        ev.Metadata["origin"] = "domain";
+        ev.Metadata["timestamp"] = ev.OcorreuEm.ToString("o");
+
+        cliente.RecordEvent(ev);
 
         return cliente;
     }
@@ -30,7 +35,10 @@ public sealed class Cliente : AggregateRoot
         if (Status == ClienteStatus.Active)
             throw new InvalidOperationException("Cliente já está ativo.");
 
-        RecordEvent(new ClienteActivated(Id));
+        var act = new ClienteActivated(Id);
+        act.Metadata["origin"] = "domain";
+        act.Metadata["timestamp"] = act.OcorreuEm.ToString("o");
+        RecordEvent(act);
     }
 
     public void Deactivate()
@@ -38,7 +46,10 @@ public sealed class Cliente : AggregateRoot
         if (Status == ClienteStatus.Inactive)
             throw new InvalidOperationException("Cliente já está inativo.");
 
-        RecordEvent(new ClienteDeactivated(Id));
+        var deact = new ClienteDeactivated(Id);
+        deact.Metadata["origin"] = "domain";
+        deact.Metadata["timestamp"] = deact.OcorreuEm.ToString("o");
+        RecordEvent(deact);
     }
 
     protected override void When(IDomainEvent @event)

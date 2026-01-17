@@ -8,17 +8,22 @@ public interface IDomainEvent : INotification
     Guid EventId { get; }
     public DateTime OcorreuEm { get; }
     public string TipoEvento { get; }
-    public long Versao { get; }
+    // Versao must be writable so infrastructure / aggregates can assign the
+    // expected aggregate version to the event instance before persisting.
+    public long Versao { get; set; }
+    // Arbitrary metadata for the event (origin, userId, requestId, etc.).
+    // Stored as string values to ensure BSON/JSON compatibility.
+    public IDictionary<string, string?> Metadata { get; set; }
 }
 
 public record DomainEvent : IDomainEvent
 {
-    // Keep backward-compatibility: version is optional and defaults to 0 when not provided.
     public DomainEvent(Guid eventId, string tipoEvento, long versao = 0)
     {
         TipoEvento = tipoEvento;
         EventId = eventId;
         Versao = versao;
+        Metadata = new Dictionary<string, string?>();
     }
 
     // Use UTC consistently across the domain
@@ -27,7 +32,10 @@ public record DomainEvent : IDomainEvent
 
     public Guid EventId { get; private set; }
 
-    public long Versao { get; private set; }
+    // Allow infrastructure to set the version before persistence so the
+    // serialized event reflects the aggregate stream version.
+    public long Versao { get; set; }
+    public IDictionary<string, string?> Metadata { get; set; }
 }
 
 public interface IIntegrationEvent : IDomainEvent;

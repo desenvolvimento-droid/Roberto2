@@ -52,6 +52,11 @@ public abstract class AggregateRoot : IAggregate
         if (_appliedEventIds.Contains(domainEvent.EventId))
             return;
 
+        // Pre-assign the version that this event will have when persisted.
+        // Use the OriginalVersao (version observed at load) plus the count of
+        // previously recorded but uncommitted events for this aggregate.
+        domainEvent.Versao = OriginalVersao + _uncommittedEvents.Count + 1;
+
         When(domainEvent);
         ValidateInvariants();
 
