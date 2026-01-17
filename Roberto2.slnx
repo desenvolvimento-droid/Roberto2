@@ -3,6 +3,7 @@
     <Project Path="src/AppHost/AppHost.csproj" />
   </Folder>
   <Folder Name="/Itens de Solução/">
+    <File Path="Desafio Técnico .NET.md" />
     <File Path="Directory.Packages.props" />
   </Folder>
   <Folder Name="/src/" />
