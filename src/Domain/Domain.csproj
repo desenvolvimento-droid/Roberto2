@@ -14,4 +14,10 @@
     <Folder Include="Entities\AuditoriaOperacoes\" />
   </ItemGroup>
 
+  <!-- Include domain corrections documentation in the project for visibility in the solution -->
+  <ItemGroup>
+    <None Include="..\..\DOMAIN_CORRECTIONS.md" />
+    <None Include="..\..\DOMAIN_ENTITIES_FIXES.md" />
+  </ItemGroup>
+
 </Project>

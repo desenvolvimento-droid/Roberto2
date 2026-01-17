@@ -13,14 +13,16 @@ public interface IDomainEvent : INotification
 
 public record DomainEvent : IDomainEvent
 {
-    public DomainEvent(Guid eventId, string tipoEvento, long versao)
+    // Keep backward-compatibility: version is optional and defaults to 0 when not provided.
+    public DomainEvent(Guid eventId, string tipoEvento, long versao = 0)
     {
         TipoEvento = tipoEvento;
         EventId = eventId;
         Versao = versao;
     }
 
-    public DateTime OcorreuEm => DateTime.Now;
+    // Use UTC consistently across the domain
+    public DateTime OcorreuEm => DateTime.UtcNow;
     public string TipoEvento { get; private set; }
 
     public Guid EventId { get; private set; }

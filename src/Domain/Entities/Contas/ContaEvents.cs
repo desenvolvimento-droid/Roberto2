@@ -9,3 +9,5 @@ public sealed record LimiteCreditoDefinido(System.Guid ContaId, decimal LimiteCr
 public sealed record ContaActivated(System.Guid ContaId) : DomainEvent(System.Guid.NewGuid(), nameof(ContaActivated));
 
 public sealed record ContaBlocked(System.Guid ContaId) : DomainEvent(System.Guid.NewGuid(), nameof(ContaBlocked));
+
+public sealed record ReservationCompleted(Guid ContaId, decimal Valor) : DomainEvent(Guid.NewGuid(), nameof(ReservationCompleted));

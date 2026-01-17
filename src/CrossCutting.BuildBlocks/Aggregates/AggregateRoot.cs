@@ -19,7 +19,7 @@ namespace BuildingBlocks.Core.Model;
 public abstract class AggregateRoot : IAggregate
 {
     // Identidade do agregado (definida apenas por eventos)
-    public Guid Id { get; protected set; }
+    public Guid Id { get; set; }
 
     // Versão atual do agregado (quantidade de eventos confirmados)
     public long Versao { get; protected set; } = 0;
@@ -28,8 +28,8 @@ public abstract class AggregateRoot : IAggregate
     public long OriginalVersao { get; private set; } = 0;
 
     // Auditoria técnica
-    public DateTime CriadoEm { get; protected set; } = DateTime.UtcNow;
-    public DateTime AtualizadoEm { get; protected set; } = DateTime.UtcNow;
+    public DateTime CriadoEm { get; set; } = DateTime.UtcNow;
+    public DateTime AtualizadoEm { get; set; } = DateTime.UtcNow;
 
     // Eventos ainda não persistidos
     private readonly List<IDomainEvent> _uncommittedEvents = new();
@@ -108,8 +108,9 @@ public abstract class AggregateRoot : IAggregate
     /// <summary>
     /// Restaura estado a partir de snapshot e ajusta versão internamente.
     /// Deve ser chamado pelo repositório.
+    /// Implementa o contrato de IAggregate.RestoreFromSnapshot(snapshot, snapshotVersion).
     /// </summary>
-    public void RestoreFromSnapshotState(object snapshot, long snapshotVersion)
+    public void RestoreFromSnapshot(object snapshot, long snapshotVersion)
     {
         RestoreFromSnapshot(snapshot);
 

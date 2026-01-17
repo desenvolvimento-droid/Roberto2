@@ -114,8 +114,8 @@ public sealed class Conta : AggregateRoot
         if (ClienteId == Guid.Empty)
             throw new InvalidOperationException("ClienteId inválido.");
 
-        if (SaldoDisponivel < 0)
-            throw new InvalidOperationException("Saldo disponível não pode ser negativo.");
+        if (SaldoDisponivel < -LimiteCredito)
+            throw new InvalidOperationException("Saldo disponível excede o limite de crédito.");
 
         if (SaldoReservado < 0)
             throw new InvalidOperationException("Saldo reservado não pode ser negativo.");
