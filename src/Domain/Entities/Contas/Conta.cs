@@ -19,7 +19,7 @@ public sealed class Conta : AggregateRoot
 
     public ContaStatus Status { get; private set; } = ContaStatus.Inactive;
 
-    protected Conta() { }
+    public Conta() { }
 
     // Factory
     public static Conta Create(Guid clienteId)

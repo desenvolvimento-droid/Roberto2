@@ -9,7 +9,7 @@ public sealed class Cliente : AggregateRoot
 
     public ClienteStatus Status { get; private set; } = ClienteStatus.Inactive;
 
-    protected Cliente() { }
+    public Cliente() { }
 
     // Factory
     public static Cliente Create(string nome)
