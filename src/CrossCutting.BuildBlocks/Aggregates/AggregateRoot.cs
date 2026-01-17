@@ -55,6 +55,20 @@ public abstract class AggregateRoot : IAggregate
         When(domainEvent);
         ValidateInvariants();
 
+        // Ensure metadata contains a timestamp for auditing and reprojection.
+        try
+        {
+            if (domainEvent.Metadata == null)
+                domainEvent.Metadata = new Dictionary<string, string?>();
+
+            if (!domainEvent.Metadata.ContainsKey("timestamp") || string.IsNullOrWhiteSpace(domainEvent.Metadata["timestamp"]))
+                domainEvent.Metadata["timestamp"] = domainEvent.OcorreuEm.ToString("o");
+        }
+        catch
+        {
+            // Metadata is best-effort; do not break domain logic if metadata assignment fails.
+        }
+
         _uncommittedEvents.Add(domainEvent);
         _appliedEventIds.Add(domainEvent.EventId);
 
